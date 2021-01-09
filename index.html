@@ -92,7 +92,7 @@
                     
                      
                         <li>
-                            <a class="wave " href="/blogs/blogs">
+                            <a class="wave " href="/blogs/">
                                 首页
                             </a>
                         </li>
@@ -112,12 +112,6 @@
                         <li>
                             <a class="wave " href="/blogs/message">
                                 留言
-                            </a>
-                        </li>
-                     
-                        <li>
-                            <a class="wave " href="/blogs/search">
-                                搜索
                             </a>
                         </li>
                      
@@ -412,7 +406,7 @@
   </div>
   
     <div class="copyright-wrap">
-      <span>&copy; 2020-2021 Lester</span>
+      <span>&copy; 2021-2021 Lester</span>
       <span id="timeDate">载入天数...</span>
       
     </div>
@@ -484,7 +478,7 @@
 <script>
     var now = new Date();
     function createtime() {
-      var grt = new Date("06/14/2020 12:00:00");//此处修改你的建站时间或者网站上线时间 
+      var grt = new Date("01/09/2021 17:00:00");//此处修改你的建站时间或者网站上线时间 
       now.setTime(now.getTime() + 250);
       days = (now - grt) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
       document.getElementById("timeDate").innerHTML = "本站已安全运行 " + dnum + " 天 ";
@@ -578,6 +572,8 @@
         }, 2000)
         var code = $(this).parent().find(".code")[0].innerText
           
+            code += "\n/**\n* 感谢您复制代码，使用代码请注明引用出处\n* @ https://lester-tai.github.io/blogs\n*/"
+              
                 var ta = document.createElement('textarea')
         document.body.appendChild(ta)
         ta.style.position = 'absolute'
