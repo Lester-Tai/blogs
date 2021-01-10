@@ -221,7 +221,7 @@
 <p>这里需要注意的是，我上面写的例子最终是不会走到这个<strong>isCurrentlyInvokedFactoryMethod</strong>条件里面去的，<del>为什么我就先不扩展了，大家如果感兴趣可以去看SimpleInstantiationStrategy#instantiate，如果看不懂可以私聊我</del>，所以我们关注的是这个<strong>resolveBeanReference</strong>方法，这个方法中 关键代码就一句从beanFactory中获取Bean</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Object beanInstance = (useArgs ? beanFactory.getBean(beanName, beanMethodArgs) : beanFactory.getBean(beanName));</span><br></pre></td></tr></table></figure>
 <p>那么这个时候去拿，拿到的就是同一个实例</p>
-<h2 id="用细节来吊打面试官"><a href="#用细节来吊打面试官" class="headerlink" title="用细节来吊打面试官"></a>用细节来吊打面试官</h2><ol>
+<h2 id="细节决定成败"><a href="#细节决定成败" class="headerlink" title="细节决定成败"></a>细节决定成败</h2><ol>
 <li>为什么createClass返回的是类的反射对象而不是类的实例？</li>
 </ol>
 <p>大家着重看上面<strong>ConfigurationClassEnhancer</strong>中的这段代码</p>
