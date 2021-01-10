@@ -127,12 +127,14 @@ a {
 
 .logo {
   /*margin: 0 15px;*/
+  background-image: url(../img/logo.jpg)
 }
 .logo a {
   font-weight: 500;
   font-size: 20px;
   line-height: 56px;
   padding: 0 15px;
+  color: transparent;
 }
 
 .btn {
