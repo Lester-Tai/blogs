@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>
+    Spring事务捕获异常依旧回滚 | Lester 博客
+  </title>
+  <meta content="width=device-width, initial-scale=1" name="viewport">
+  <meta name="theme-color" content="#4184f3">
+  
+  
+  <link href="https://lester-tai.github.io/blogs/img/favicon.png" rel="icon" />
+  
+
+  
+<link rel="stylesheet" href="/blogs/css/highlight.light.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/prism-customize.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/nav-icon.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/waves.min.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/jquery.tocify.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/main.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/nav-indicator.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/twikoo.css">
+
+  
+<link rel="stylesheet" href="/blogs/css/search.css">
+
+  
+  
+
+  
+
+  </meta>
+  </meta>
+  <script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.5.1/jquery.js"></script>
+  
+<script src="/blogs/js/comment.js"></script>
+
+  
+<script src="/blogs/js/copy.js"></script>
+
+<meta name="generator" content="Hexo 5.3.0"></head>
+
+<body>
+    <header>
+        <!-- cover image or sth. -->
+    </header>
+    <div id="main" class="m-scene">
+        
+<div class="nav-wrapper" id="header">
+
+    <div class="container">
+        <nav>
+            
+            <div class="logo wave">
+                <a href="/blogs/" id="logo">
+                    Lester Blogs
+                </a>
+            </div>
+
+            
+
+            <div class="nav-toggle-icon" >
+                <div class="material-hamburger">
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                    <span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="menu-wrapper">
+                <div class="nav-indicator">
+                </div>
+                <ul class="menus">
+                    
+                     
+                        <li>
+                            <a class="wave " href="/blogs/">
+                                首页
+                            </a>
+                        </li>
+                     
+                        <li>
+                            <a class="wave " href="/blogs/archives">
+                                归档
+                            </a>
+                        </li>
+                     
+                    
+                   
+                </ul>
+            </div>
+        </nav>
+    </div>
+</div>
+<style>
+    #header{
+        /* background: linear-gradient(to right,blue,green); */
+        /* height: 70px; */
+        width: 100%;
+        /* position: sticky; */
+        /* left: 0; */
+        top: 0;
+        transition-property:top,opacity;
+        transition-duration: 1s ;   
+    }
+</style>
+
+
+            <div class="container content">
+                <div class="scene_element scene_element--fadein">
+                    <div class="row">
+  <div class="main main-article">
+    <article>
+
+      
+            <header class="post-header">
+              
+            </header>
+
+            <h1 class="post-title">
+              Spring事务捕获异常依旧回滚
+            </h1>
+
+            <section class="post-info post-info-bottom">
+
+              <span class="post-date">发布于
+                <span class="post-date-text">
+                   2021-01-25
+                </span>
+              </span>
+
+
+
+
+              
+                <span class="post-category">分类:
+                  <a class="article-category-link" href="/blogs/categories/Spring/">Spring</a>
+                </span>
+                
+                  
+                    <span class="post-tags">
+                      <ul class="post-tag-list" itemprop="keywords"><li class="post-tag-list-item"><a class="post-tag-list-link" href="/blogs/tags/Java/" rel="tag">Java</a></li><li class="post-tag-list-item"><a class="post-tag-list-link" href="/blogs/tags/Spring/" rel="tag">Spring</a></li></ul>
+                    </span>
+                    
+
+                      <!-- 阅读量统计 -->
+                      
+                        <span class="post-visitors">阅读量:<span id="twikoo_visitors">0</span></span>
+                        
+
+
+            </section>
+
+            <section class="post-content">
+
+              <h2 id="前沿"><a href="#前沿" class="headerlink" title="前沿"></a>前沿</h2><p>一段生产事故发人深省，在Spring的声明式事务中手动捕获异常，居然判定回滚了，这是什么操作？话不多说直接上代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">A</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> B b;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> C c;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.DEFAULT)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">operate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            b.insertB();</span><br><span class="line">            c.insertC();</span><br><span class="line">        &#125;<span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            e.printStackTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">B</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> BM bm;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Transactional(propagation = Propagation.REQUIRED)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">insertB</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> bm.insert(<span class="string">&quot;B&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">C</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> CM cm;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Transactional(propagation = Propagation.REQUIRED)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">insertC</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> cm.insert(<span class="string">&quot;C&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="问题阐述"><a href="#问题阐述" class="headerlink" title="问题阐述"></a>问题阐述</h2><p>好了大家都看到上面这段代码了，在正常的情况的我们会往B表和C表中各插入一条数据，那么当代码出现异常时又会怎么样呢？</p>
+<p>我们现在假设B插入数据成功，但是C插入数据失败了，此时异常会上抛到A，被A中<code>operate</code>方法的try - cache所捕获，正常来说此时数据库中B能插入一条记录，而C表插入失败，这是我们期望的情况，<font color="#cea5550">但事实却不是</font>，实际情况是B表没有插入数据，C表也没有插入数据，也就是说整个操作被Spring给回滚了</p>
+<blockquote>
+<p>注意点</p>
+<p>如果代码稍稍变动一下，将try - cache放在<code>insertC</code>的代码块中，在同样的场景下，B中会成功插入一条记录</p>
+</blockquote>
+<h2 id="知识点前置条件"><a href="#知识点前置条件" class="headerlink" title="知识点前置条件"></a>知识点前置条件</h2><p>了解Spring的传播机制的可以直接跳过</p>
+<blockquote>
+<p>我们先要搞清楚Spring中的<code>REQUIRED</code>的作用</p>
+<p>REQUIRED：如果当前没有事务就创建一个新的事务，如果当前已经存在事务就加入到当前事务</p>
+<p>也就是说当我们的传播机制同时为<code>REQUIRED</code>时，A、B、C三者的事务是共用一个的，只有当A的流程全部走完时才会做一次commit或者rollback操作，不会在执行B或者C的过程中进行commit和rollback</p>
+</blockquote>
+<h2 id="问题追踪"><a href="#问题追踪" class="headerlink" title="问题追踪"></a>问题追踪</h2><p>好，有了一定的知识储备，我们一起来看源码</p>
+<p>我们首先找到Spring事务的代理入口<code>TransactionInterceptor</code>, 当我们通过调用A类中的<code>operate</code>方法时会调用<code>TransactionInterceptor</code>的<code>invoke</code>方法，这是整个事务的入口，我们直接看重点<code>invoke</code>中的<code>invokeWithinTransaction</code>方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//获取事务属性类 AnnotationTransactionAttributeSource</span></span><br><span class="line">TransactionAttributeSource tas = getTransactionAttributeSource();</span><br><span class="line"><span class="comment">//获取事务属性</span></span><br><span class="line"><span class="keyword">final</span> TransactionAttribute txAttr = (tas != <span class="keyword">null</span> ? tas.getTransactionAttribute(method, targetClass) : <span class="keyword">null</span>);</span><br><span class="line"><span class="comment">//获取事务管理器</span></span><br><span class="line"><span class="keyword">final</span> TransactionManager tm = determineTransactionManager(txAttr);</span><br><span class="line"></span><br><span class="line">PlatformTransactionManager ptm = asPlatformTransactionManager(tm);</span><br><span class="line"><span class="comment">//获取joinpoint</span></span><br><span class="line"><span class="keyword">final</span> String joinpointIdentification = methodIdentification(method, targetClass, txAttr);</span><br><span class="line"><span class="comment">//注解事务会走这里</span></span><br><span class="line"><span class="keyword">if</span> (txAttr == <span class="keyword">null</span> || !(ptm <span class="keyword">instanceof</span> CallbackPreferringPlatformTransactionManager)) &#123;</span><br><span class="line">	<span class="comment">// Standard transaction demarcation with getTransaction and commit/rollback calls.</span></span><br><span class="line">	<span class="comment">//开启事务</span></span><br><span class="line">	TransactionInfo txInfo = createTransactionIfNecessary(ptm, txAttr, joinpointIdentification);</span><br><span class="line"></span><br><span class="line">	Object retVal;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		<span class="comment">// This is an around advice: Invoke the next interceptor in the chain.</span></span><br><span class="line">		<span class="comment">// This will normally result in a target object being invoked.</span></span><br><span class="line">		retVal = invocation.proceedWithInvocation();</span><br><span class="line">	&#125; <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">		<span class="comment">// target invocation exception</span></span><br><span class="line">		<span class="comment">//事务回滚</span></span><br><span class="line">		completeTransactionAfterThrowing(txInfo, ex);</span><br><span class="line">		<span class="keyword">throw</span> ex;</span><br><span class="line">	&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">		cleanupTransactionInfo(txInfo);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (retVal != <span class="keyword">null</span> &amp;&amp; vavrPresent &amp;&amp; VavrDelegate.isVavrTry(retVal)) &#123;</span><br><span class="line">		<span class="comment">// Set rollback-only in case of Vavr failure matching our rollback rules...</span></span><br><span class="line">		TransactionStatus status = txInfo.getTransactionStatus();</span><br><span class="line">		<span class="keyword">if</span> (status != <span class="keyword">null</span> &amp;&amp; txAttr != <span class="keyword">null</span>) &#123;</span><br><span class="line">			retVal = VavrDelegate.evaluateTryFailure(retVal, txAttr, status);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//事务提交</span></span><br><span class="line">	commitTransactionAfterReturning(txInfo);</span><br><span class="line">	<span class="keyword">return</span> retVal;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>不重要的代码我已经省略了，好我们来看这个流程，上面这段代码很明显反应出了，当我们程序执行过程中抛出了异常时会调用到<code>completeTransactionAfterThrowing</code>的回滚操作，如果没有发生异常最终会调用事务提交<code>commitTransactionAfterReturning</code>， 我们来分析一下</p>
+<p><img src="/blogs/img/transactionRequired.jpg" alt="img"></p>
+<p>正常情况是C发生异常，并且执行到了<code>completeTransactionAfterThrowing</code>事务回滚，但是因为不是新创建的事务，而是加入的事务所以并不会触发回滚操作，而在A中捕获了该异常，并且最终走到<code>commitTransactionAfterReturning</code>事务提交，事实是这样的吗？</p>
+<p>事实上就是这样的，那就奇怪了，我明明提交了，怎么反而回滚了，我们继续往下看</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> TransactionStatus <span class="title">getTransaction</span><span class="params">(<span class="meta">@Nullable</span> TransactionDefinition definition)</span> <span class="keyword">throws</span> TransactionException </span>&#123;</span><br><span class="line">	<span class="comment">// Use defaults if no transaction definition given.</span></span><br><span class="line">	TransactionDefinition def = (definition != <span class="keyword">null</span> ? definition : TransactionDefinition.withDefaults());</span><br><span class="line"></span><br><span class="line">	<span class="comment">//重点看.. DataSourceTransactionObject拿到对象</span></span><br><span class="line">	Object transaction = doGetTransaction();</span><br><span class="line">	<span class="keyword">boolean</span> debugEnabled = logger.isDebugEnabled();</span><br><span class="line"></span><br><span class="line">	<span class="comment">//第一次进来connectionHolder为空的, 所以不存在事务</span></span><br><span class="line">	<span class="keyword">if</span> (isExistingTransaction(transaction)) &#123;</span><br><span class="line">		<span class="comment">// Existing transaction found -&gt; check propagation behavior to find out how to behave.</span></span><br><span class="line">		<span class="comment">//如果不是第一次进来, 则会走这个逻辑</span></span><br><span class="line">		<span class="keyword">return</span> handleExistingTransaction(def, transaction, debugEnabled);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// Check definition settings for new transaction.</span></span><br><span class="line">	<span class="keyword">if</span> (def.getTimeout() &lt; TransactionDefinition.TIMEOUT_DEFAULT) &#123;</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> InvalidTimeoutException(<span class="string">&quot;Invalid transaction timeout&quot;</span>, def.getTimeout());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// No existing transaction found -&gt; check propagation behavior to find out how to proceed.</span></span><br><span class="line">	<span class="keyword">if</span> (def.getPropagationBehavior() == TransactionDefinition.PROPAGATION_MANDATORY) &#123;</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> IllegalTransactionStateException(</span><br><span class="line">				<span class="string">&quot;No existing transaction found for transaction marked with propagation &#x27;mandatory&#x27;&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">//第一次进来大部分会走这里（传播属性是 Required ｜ Requested New ｜ Nested）</span></span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (def.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||</span><br><span class="line">			def.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||</span><br><span class="line">			def.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) &#123;</span><br><span class="line">		<span class="comment">//先挂起</span></span><br><span class="line">		SuspendedResourcesHolder suspendedResources = suspend(<span class="keyword">null</span>);</span><br><span class="line">		<span class="keyword">if</span> (debugEnabled) &#123;</span><br><span class="line">			logger.debug(<span class="string">&quot;Creating new transaction with name [&quot;</span> + def.getName() + <span class="string">&quot;]: &quot;</span> + def);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="comment">//开启事务</span></span><br><span class="line">			<span class="keyword">return</span> startTransaction(def, transaction, debugEnabled, suspendedResources);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (RuntimeException | Error ex) &#123;</span><br><span class="line">			resume(<span class="keyword">null</span>, suspendedResources);</span><br><span class="line">			<span class="keyword">throw</span> ex;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="comment">// Create &quot;empty&quot; transaction: no actual transaction, but potentially synchronization.</span></span><br><span class="line">		<span class="keyword">if</span> (def.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT &amp;&amp; logger.isWarnEnabled()) &#123;</span><br><span class="line">			logger.warn(<span class="string">&quot;Custom isolation level specified but no actual transaction initiated; &quot;</span> +</span><br><span class="line">					<span class="string">&quot;isolation level will effectively be ignored: &quot;</span> + def);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">boolean</span> newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);</span><br><span class="line">		<span class="keyword">return</span> prepareTransactionStatus(def, <span class="keyword">null</span>, <span class="keyword">true</span>, newSynchronization, debugEnabled, <span class="keyword">null</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这段代码是开启事务的代码，我们来看，当我们A第一次走进来的时候，此时是没有事务的，所以<code>isExistingTransaction</code>方法不成立，往下走，因为我们的传播机制是REQUIRED，所以我们会走到<code>startTransaction</code>方法中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> TransactionStatus <span class="title">startTransaction</span><span class="params">(TransactionDefinition definition, Object transaction, <span class="keyword">boolean</span> debugEnabled, <span class="meta">@Nullable</span> SuspendedResourcesHolder suspendedResources)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">boolean</span> newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);</span><br><span class="line">	<span class="comment">//创建一个新的事务状态, 注意这里的newTransaction 属性为true</span></span><br><span class="line">	DefaultTransactionStatus status = newTransactionStatus(</span><br><span class="line">			definition, transaction, <span class="keyword">true</span>, newSynchronization, debugEnabled, suspendedResources);</span><br><span class="line">	<span class="comment">//开启事务</span></span><br><span class="line">	doBegin(transaction, definition);</span><br><span class="line">	<span class="comment">//开启事务后, 改变事务状态</span></span><br><span class="line">	prepareSynchronization(status, definition);</span><br><span class="line">	<span class="keyword">return</span> status;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>好这里我们只需要关注一个点那就是<code>newTransactionStatus</code>的第三个参数<code>newTransaction</code>，只有当我们新创建一个事务的时候才会为<code>true</code>，<strong>这个属性很重要</strong>，我们后续还会用到它</p>
+<p>好了，到这里第一次的事务开启就已经完成了，然后我们会调用业务逻辑，当调用insertB时，又会走到<code>getTransaction</code>，我们继续来看它，此时<code>isExistingTransaction</code>就可以拿到值了，因为A已经帮我们创建好了事务，此时会调用到<code>handleExistingTransaction</code>方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//如果第二次进来还是PROPAFGATION_REQUIRED， 走这里, newTransation为false</span></span><br><span class="line"><span class="keyword">return</span> prepareTransactionStatus(definition, transaction, <span class="keyword">false</span>, newSynchronization, debugEnabled, <span class="keyword">null</span>);</span><br></pre></td></tr></table></figure>
+<p>针对REQUIRED有用的代码就这一句，其他全部不用看，同样的我们看到第三个参数newTransaction，这里是false了，说明是加入了之前的事务，而不是自己新创建的，然后执行业务代码，最后走到commit，我们来看看commit中做了什么</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//如果有回滚点</span></span><br><span class="line"><span class="keyword">if</span> (status.hasSavepoint()) &#123;</span><br><span class="line">	<span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">		logger.debug(<span class="string">&quot;Releasing transaction savepoint&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	unexpectedRollback = status.isGlobalRollbackOnly();</span><br><span class="line">	status.releaseHeldSavepoint();</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//如果是新事务, 则提交事务</span></span><br><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (status.isNewTransaction()) &#123;</span><br><span class="line">	<span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">		logger.debug(<span class="string">&quot;Initiating transaction commit&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	unexpectedRollback = status.isGlobalRollbackOnly();</span><br><span class="line">	doCommit(status);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (isFailEarlyOnGlobalRollbackOnly()) &#123;</span><br><span class="line">	unexpectedRollback = status.isGlobalRollbackOnly();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它什么事情都没有做，为什么？因为我们的<code>newTransaction</code>不为true，所以当我们的代码在<code>operate</code>方法全部执行完以后才会走到这里</p>
+<p>好接下来我们来看<code>insertC</code>，前面的流程都一模一样，我们直接看到回滚代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processRollback</span><span class="params">(DefaultTransactionStatus status, <span class="keyword">boolean</span> unexpected)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		<span class="keyword">boolean</span> unexpectedRollback = unexpected;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			triggerBeforeCompletion(status);</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (status.hasSavepoint()) &#123;</span><br><span class="line">				<span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">					logger.debug(<span class="string">&quot;Rolling back transaction to savepoint&quot;</span>);</span><br><span class="line">				&#125;</span><br><span class="line">				status.rollbackToHeldSavepoint();</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (status.isNewTransaction()) &#123;</span><br><span class="line">        <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">					logger.debug(<span class="string">&quot;Initiating transaction rollback&quot;</span>);</span><br><span class="line">				&#125;</span><br><span class="line">				doRollback(status);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				<span class="comment">// Participating in larger transaction</span></span><br><span class="line">				<span class="keyword">if</span> (status.hasTransaction()) &#123;</span><br><span class="line">					<span class="keyword">if</span> (status.isLocalRollbackOnly() || isGlobalRollbackOnParticipationFailure()) &#123;</span><br><span class="line">						<span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">							logger.debug(<span class="string">&quot;Participating transaction failed - marking existing transaction as rollback-only&quot;</span>);</span><br><span class="line">						&#125;</span><br><span class="line">						doSetRollbackOnly(status);</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						<span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">							logger.debug(<span class="string">&quot;Participating transaction failed - letting transaction originator decide on rollback&quot;</span>);</span><br><span class="line">						&#125;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">					logger.debug(<span class="string">&quot;Should roll back transaction but cannot - no transaction available&quot;</span>);</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="comment">// Unexpected rollback only matters here if we&#x27;re asked to fail early</span></span><br><span class="line">				<span class="keyword">if</span> (!isFailEarlyOnGlobalRollbackOnly()) &#123;</span><br><span class="line">					unexpectedRollback = <span class="keyword">false</span>;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">catch</span> (RuntimeException | Error ex) &#123;</span><br><span class="line">			triggerAfterCompletion(status, TransactionSynchronization.STATUS_UNKNOWN);</span><br><span class="line">			<span class="keyword">throw</span> ex;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		triggerAfterCompletion(status, TransactionSynchronization.STATUS_ROLLED_BACK);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Raise UnexpectedRollbackException if we had a global rollback-only marker</span></span><br><span class="line">		<span class="keyword">if</span> (unexpectedRollback) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> UnexpectedRollbackException(</span><br><span class="line">					<span class="string">&quot;Transaction rolled back because it has been marked as rollback-only&quot;</span>);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">		cleanupAfterCompletion(status);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们的<code>insertC</code>方法同样它的newTransaction不是true，所以最终会走到<code>doSetRollbackOnly</code>，这个方法<strong>重中之重</strong>，最后会调用这样一段代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setRollbackOnly</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">this</span>.rollbackOnly = <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后我们就要执行到我们的关键代码A中的<code>operate</code>的提交代码了</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">commit</span><span class="params">(TransactionStatus status)</span> <span class="keyword">throws</span> TransactionException </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (status.isCompleted()) &#123;</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> IllegalTransactionStateException(<span class="string">&quot;Transaction is already completed - do not call commit or rollback more than once per transaction&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	DefaultTransactionStatus defStatus = (DefaultTransactionStatus) status;</span><br><span class="line">	<span class="keyword">if</span> (defStatus.isLocalRollbackOnly()) &#123;</span><br><span class="line">		<span class="keyword">if</span> (defStatus.isDebug()) &#123;</span><br><span class="line">			logger.debug(<span class="string">&quot;Transactional code has requested rollback&quot;</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		processRollback(defStatus, <span class="keyword">false</span>);</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!shouldCommitOnGlobalRollbackOnly() &amp;&amp; defStatus.isGlobalRollbackOnly()) &#123;</span><br><span class="line">		<span class="keyword">if</span> (defStatus.isDebug()) &#123;</span><br><span class="line">			logger.debug(<span class="string">&quot;Global transaction is marked as rollback-only but transactional code requested commit&quot;</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		processRollback(defStatus, <span class="keyword">true</span>);</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//执行事务提交</span></span><br><span class="line">	processCommit(defStatus);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>好了，看到这大家都明白了吧，在commit中，Spring会去判断<code>defStatus.isGlobalRollbackOnly</code>有没有抛出过异常被Spring所拦截，如果有，那么就不会执行commit操作，转而执行<code>processRollback</code>回滚操作</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><blockquote>
+<p><font color="#cea5550">在Spring的REQUIRED中，只要异常被Spring捕获到过，那么Spring最终就会回滚整个事务，即使自己在业务中已经捕获</font></p>
+<p>所以我们回到最初的代码，如果我们希望Spring不进行回滚，那么我们只用将try-cache方法insertC方法中就可以，因为此时抛出的异常并不会被Spring所拦截到</p>
+</blockquote>
+
+            </section>
+    </article>
+    
+
+
+        <!-- 版权声明 -->
+        
+<div class="post-copyright">
+    <div>
+        <strong>本文作者：</strong>
+        <span>Lester</span>
+    </div>
+    <div>
+        <strong>本文链接：</strong>
+        <a href="https://lester-tai.github.io/blogs/Spring事务捕获异常依旧回滚">
+            https://lester-tai.github.io/blogs/Spring事务捕获异常依旧回滚
+        </a>
+    </div>
+    <div>
+        <span>欢迎任何形式的转载，但请务必注明出处。</span>
+    </div>
+    <div>
+        <span>由于笔者水平有限，如果文章或代码有表述不当之处，还请不吝赐教。</span>
+    </div>
+</div>
+
+
+
+
+
+
+<style>
+    .post-copyright {
+        background-color: #fff;
+  box-shadow: 0px 0px 1px 1px rgba(0, 0, 0, 0.05);
+        display: block;
+        margin: 20px auto;
+        margin-bottom: 15px;
+        padding: 10px;
+        font-size: 15px;
+        color: #2e2d2d;
+        word-break: break-all;
+        line-height: 1.8;
+    }
+
+
+    .post-copyright a {
+        color: #2e2d2d;
+        border-bottom: 1px solid #999; 
+    }
+
+    .post-copyright a:hover {
+        color: #2e2d2d;
+        border-bottom: 1px solid #000; 
+    }
+</style>
+
+          <!-- comments -->
+          <div class="comments">
+    <h3 id="commenttitle" style="margin-top: 20px;margin-left: 10px;">评论区</h3>
+    <div id="tcomment"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/twikoo@0.6.0/dist/twikoo.all.min.js"></script>
+<script>twikoo.init({ envId: 'twikoo-5gllssphe2a5faa8', el: '#tcomment' })</script>
+
+
+            <div class="right-icon">
+              <div id="to-valine" class="right-icon-item">
+                <a href="#commenttitle">评论</a>
+              </div>
+            </div>
+
+  </div>
+
+
+  <aside>
+    <div class="aside-wrap">
+    
+        <section class="widget-wrap">
+    <h3 class="widget-title">公告</h3>
+    <div class="widget">
+        <div class="notice">
+            <p>走别人的路让别人无路可走<br></p>
+        </div>
+    </div>
+</section>
+
+
+    
+        
+  <section class="widget-wrap">
+    <h3 class="widget-title">文章分类</h3>
+    <div class="widget">
+      <div class="categories-list">
+        
+           
+            
+              <a class="category-list-item" href="/categories/Spring">
+                <span class="category-list-link">Spring</span>
+                <span class="category-list-number">(3)</span>
+              </a>
+            
+          
+        
+      </div>
+    </div>
+  </section>
+
+
+    
+        
+  <div class="widget-wrap">
+    <h3 class="widget-title">标签</h3>
+    <div class="widget">
+      <ul class="tag-list" itemprop="keywords"><li class="tag-list-item"><a class="tag-list-link" href="/blogs/tags/Java/" rel="tag">Java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/blogs/tags/Spring/" rel="tag">Spring</a></li></ul>
+    </div>
+  </div>
+
+
+    
+        
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul class="recent-posts">
+        
+          <li>
+            <a href="/blogs/2021/01/25/Spring%E4%BA%8B%E5%8A%A1%E6%8D%95%E8%8E%B7%E5%BC%82%E5%B8%B8%E4%BE%9D%E6%97%A7%E5%9B%9E%E6%BB%9A/">Spring事务捕获异常依旧回滚</a>
+          </li>
+        
+          <li>
+            <a href="/blogs/2021/01/11/%E6%B7%B1%E5%85%A5%E6%B5%85%E5%87%BASpring%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96/">深入浅出Spring循环依赖</a>
+          </li>
+        
+          <li>
+            <a href="/blogs/2021/01/09/Configuration%E5%92%8CComponent%E7%9A%84%E5%8C%BA%E5%88%AB/">Configuration和Component的区别</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+    
+        
+  <section class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/blogs/archives/2021/01/">一月 2021</a></li></ul>
+    </div>
+  </section>
+
+
+    
+        
+  <section class="widget-wrap">
+    <h3 class="widget-title">友情链接</h3>
+    <div>
+      <ul class="widget-links">
+          
+          <li>
+              <a target="_blank" rel="noopener" href="https://www.coolshell.cn" title="">
+                  酷壳 - CoolShell
+              </a>
+          </li>
+          
+      </ul>
+    </div>
+  </section>
+
+
+<style>
+  .widget-links {
+    list-style: none;
+    padding-left: 10px;
+  }
+  .widget-links >li > a:hover {
+    color: #f40;
+    text-decoration: underline;
+  }
+</style>
+    
+        <section class="widget-wrap">
+    <div class="widget">
+        <div class="notice attention">
+            <p>如有其他问题，请在博客<a href="https://lester-tai.github.io/blogs/message">留言</a>，或者发邮件给我，邮箱地址：lester.tai@foxmail.com</p>
+            
+        </div>
+    </div>
+</section>
+
+    
+    
+</div>
+
+
+      <!-- 目录 -->
+      
+</div>
+
+
+<script>
+  $('#to-top').click(function () { $('html,body').animate({ scrollTop: '0px' }, 500); return false; });
+  
+  function createImgEventFullScreen() {
+        var imgs = $(".main-article").find("img");
+        console.log(imgs);
+        for (var i = 0; i < imgs.length; i++) {
+            imgs[i].onclick = function (e) {
+                var src = e.srcElement.currentSrc;
+                var _this = $(this);
+                console.log(_this);
+                createCover(src,_this);
+            }
+        }
+        function createCover(src,_this) {
+            console.log(_this);
+            console.log(src);
+            var cover = $("<div id='outerDiv'  style='position:fixed;top:0;left:0;background:rgba(0,0,0,0.7);z-index:5;width:100%;height:100%;display:none;'><div id='innerDiv' style='position:absolute;'><img  id='bigImg' style='border:5px solid #fff;' src=''/></div></div>");
+            $("#outerDiv").remove();
+            $("body").append(cover);
+            imgShow("#outerDiv", "#innerDiv", "#bigImg", _this,src);
+
+        }
+    }
+    function imgShow(outerDiv, innerDiv, bigImg, _this,src) {
+        $(bigImg).attr("src", src); //设置#bigImg元素的src属性
+
+        /*获取当前点击图片的真实大小，并显示弹出层及大图*/
+        $("<img/>").attr("src", src).load(function () {
+            var windowW = $(window).width(); //获取当前窗口宽度
+            var windowH = $(window).height(); //获取当前窗口高度
+            var realWidth = this.width; //获取图片真实宽度
+            var realHeight = this.height; //获取图片真实高度
+            var imgWidth, imgHeight;
+            var scale = 0.8; //缩放尺寸，当图片真实宽度和高度大于窗口宽度和高度时进行缩放
+
+            if (realHeight > windowH * scale) { //判断图片高度
+                imgHeight = windowH * scale; //如大于窗口高度，图片高度进行缩放
+                imgWidth = imgHeight / realHeight * realWidth; //等比例缩放宽度
+                if (imgWidth > windowW * scale) { //如宽度仍大于窗口宽度
+                    imgWidth = windowW * scale; //再对宽度进行缩放
+                }
+            } else if (realWidth > windowW * scale) { //如图片高度合适，判断图片宽度
+                imgWidth = windowW * scale; //如大于窗口宽度，图片宽度进行缩放
+                imgHeight = imgWidth / realWidth * realHeight; //等比例缩放高度
+            } else { //如果图片真实高度和宽度都符合要求，高宽不变
+                imgWidth = realWidth;
+                imgHeight = realHeight;
+            }
+            $(bigImg).css("width", imgWidth); //以最终的宽度对图片缩放
+
+            var w = (windowW - imgWidth) / 2; //计算图片与窗口左边距
+            var h = (windowH - imgHeight) / 2; //计算图片与窗口上边距
+            $(innerDiv).css({ "top": h, "left": w }); //设置#innerDiv的top和left属性
+            $(outerDiv).fadeIn("fast"); //淡入显示#outerDiv
+        });
+
+        $(outerDiv).click(function () { //再次点击淡出消失弹出层
+            $(this).fadeOut("fast");
+        });
+    }
+    setTimeout(function () {
+        createImgEventFullScreen();
+    }, 1000)
+</script>
+
+                </div>
+            </div>
+            <div class="right-icon">
+                <div id="to-top" class="right-icon-item">
+                  <a>
+                    <span class="top-left"></span>
+                    <span class="top-right"></span>
+                  </a>
+                </div>
+              </div>
+    </div>
+    <footer class="footer">
+  <div class="links-wrap-wrap">
+    <div class="links-wrap">
+      <!-- 
+        <section class="link-wrap">
+          <h3 class="link-title">友情链接</h3>
+          <div>
+            <ul class="link-item-wrap">
+                
+                <li class="link-item">
+                    <a target="_blank" rel="noopener" href="https://www.coolshell.cn" title="">
+                        酷壳 - CoolShell
+                    </a>
+                </li>
+                
+            </ul>
+          </div>
+        </section>
+       -->
+    
+    
+      
+        <section class="link-wrap">
+          <h3 class="link-title">导航</h3>
+          <div>
+            <ul class="link-item-wrap">
+                
+                <li class="link-item">
+                    <a target="_blank" rel="noopener" href="https://github.com" title="">
+                        GitHub
+                    </a>
+                </li>
+                
+            </ul>
+          </div>
+        </section>
+      
+
+
+      
+        <section class="link-wrap">
+          <h3 class="link-title">社区论坛</h3>
+          <div>
+            <ul class="link-item-wrap">
+                
+                <li class="link-item">
+                    <a target="_blank" rel="noopener" href="https://www.coolshell.cn" title="">
+                        酷壳 - CoolShell
+                    </a>
+                </li>
+                
+            </ul>
+          </div>
+        </section>
+      
+
+
+      
+        <section class="link-wrap">
+          <h3 class="link-title">文档</h3>
+          <div>
+            <ul class="link-item-wrap">
+                
+                <li class="link-item">
+                    <a target="_blank" rel="noopener" href="https://hexo.io" title="">
+                        hexo官网
+                    </a>
+                </li>
+                
+            </ul>
+          </div>
+        </section>
+      
+
+    </div>
+  </div>
+  
+    <div class="copyright-wrap">
+      <span>&copy; 2021-2021 Lester</span>
+      <span id="timeDate">载入天数...</span>
+      
+    </div>
+    <span id="busuanzi_container_site_pv">
+      本站总访问量<span id="busuanzi_value_site_pv"></span>次
+    </span>
+    <span id="busuanzi_container_site_uv">
+      ，本站访客数<span id="busuanzi_value_site_uv"></span>人次
+    </span>
+</footer>
+<style>
+  .links-wrap-wrap {
+    height: auto;
+    width: 100%;
+  }
+  .links-wrap {
+    width: 80%;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  .link-wrap {
+    float: left;
+    width: 50%;
+  }
+  .link-title {
+    text-align: left;
+    font-size: 20px;
+    padding-top: 0;
+  }
+  .link-item-wrap {
+    padding: 5px;
+    overflow: hidden;
+  }
+  .link-item {
+    float: left;
+    list-style: none;
+    padding-right: 30px;
+    font-weight: 500;
+    line-height: 2.6;
+    
+  }
+  .link-item > a{
+    color: #e4e7ee;
+  }
+  .link-item > a:hover {
+    color: #fff;
+    text-decoration: underline;
+  }
+  .copyright-wrap {
+    display: block;
+    margin-top: 40px;
+    padding-bottom: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .links-wrap {
+      width: 100%;
+    }
+  }
+  @media (max-width: 538px) {
+    .link-item {
+      float: none;
+      display: block;
+      text-align: left;
+    }
+  }
+  
+</style>
+<script>
+    var now = new Date();
+    function createtime() {
+      var grt = new Date("01/09/2021 17:00:00");//此处修改你的建站时间或者网站上线时间 
+      now.setTime(now.getTime() + 250);
+      days = (now - grt) / 1000 / 60 / 60 / 24; dnum = Math.floor(days);
+      document.getElementById("timeDate").innerHTML = "本站已安全运行 " + dnum + " 天 ";
+    }
+    setInterval("createtime()", 1000);
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<script src="/blogs/lib/jquery.js"></script>
+
+
+<script src="/blogs/lib/waves.js"></script>
+
+
+<script src="/blogs/lib/jquery-ui.js"></script>
+
+
+<script src="/blogs/lib/jquery.tocify.js"></script>
+
+
+<script src="/blogs/js/main.js"></script>
+
+
+        
+<style>
+  .copy-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+    color: rgb(206, 206, 206);
+    white-space: nowrap;
+    vertical-align: middle;
+    cursor: pointer;
+    border-radius: 3px;
+    user-select: none;
+    outline: 0;
+  }
+
+  .copy-btn:hover {
+    color: #888
+  }
+
+  .highlight-wrap .copy-btn {
+    padding: 2px 6px;
+    position: absolute;
+    right: 10px;
+    top: 1px;
+    z-index: 1;
+  }
+
+
+
+  .highlight-wrap {
+    position: relative;
+  }
+
+  #copysuccess {
+    width: 200px;
+    height: 75px;
+    position: fixed;
+    right: 50%;
+    margin-right: -100px;
+    top: 40%;
+    margin-top: -40px;
+    color: #fff;
+    font-weight: 600;
+    background: #444444d8;
+    display: none;
+    z-index: 99999;
+    border-radius: 10px;
+    text-align: center;
+    line-height: 30px;
+    padding-top: 10px;
+    user-select: none;
+  }
+</style>
+
+<script>
+  addLoadEvent(() => {
+    $('.highlight').each(function (i, e) {
+      var $wrap = $('<div>').addClass('highlight-wrap')
+      $(e).after($wrap)
+      $wrap.append($('<div>').addClass('copy-btn').append('复制代码').on('click', function (e) {
+        var copysuccess = document.getElementById('copysuccess');
+        copysuccess.style.display = 'block'
+        setTimeout(function () {
+          copysuccess.style.display = 'none'
+        }, 2000)
+        var code = $(this).parent().find(".code")[0].innerText
+          
+            code += "\n/**\n* 感谢您复制代码，使用代码请注明引用出处\n* @ https://lester-tai.github.io/blogs\n*/"
+              
+                var ta = document.createElement('textarea')
+        document.body.appendChild(ta)
+        ta.style.position = 'absolute'
+        ta.style.top = '0px'
+        ta.style.left = '0px'
+        ta.value = code
+        ta.select()
+        ta.focus()
+        var result = document.execCommand('copy')
+        document.body.removeChild(ta)
+          
+                  if (result) $(this).text('复制成功')
+            else $(this).text('复制失败')
+              
+                $(this).blur()
+      })).on('mouseleave', function (e) {
+        var $b = $(this).find('.copy-btn')
+        setTimeout(function () {
+          $b.text('复制代码')
+        }, 1000)
+      }).append(e)
+    })
+  })
+</script>
+
+            <div id="copysuccess">复制成功<br>欢迎阅读文章~</div>
+</body>
+
+</html>
+
+<script>
+    $('#to-top').click(function () { $('html,body').animate({ scrollTop: '0px' }, 500); return false; });
+</script>
